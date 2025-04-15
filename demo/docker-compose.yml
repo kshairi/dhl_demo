@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mysql_container
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: uk_postcode
+      MYSQL_USER: dhluser
+      MYSQL_PASSWORD: dhldemo
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./src/main/resources/00-init.sql:/docker-entrypoint-initdb.d/00-init.sql
+    networks:
+      - my-network
+    command: [
+      "--max_allowed_packet=1G",
+      "--innodb_buffer_pool_size=6G",
+      "--innodb_log_file_size=1G",
+      "--wait_timeout=28800",
+      "--skip-log-bin"
+    ]
+    restart: unless-stopped
+
+  app:
+    build: .
+    ports:
+      - "8100:8100"
+    depends_on:
+      - mysql
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/uk_postcode?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: dhluser
+      SPRING_DATASOURCE_PASSWORD: dhldemo
+    networks:
+      - my-network
+
+networks:
+  my-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
